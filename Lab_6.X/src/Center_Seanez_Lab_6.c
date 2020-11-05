@@ -245,16 +245,6 @@ void init_ADC(){
  */
 
 
-void update_temp(){
-    ADCON0 = 0b00001100;    //Configure ADCON0 to use AN3 with Temp Sensor
-    ADCON0bits.ADON = 1;        //Start ADC
-    ADCON0bits.GO = 1;          //Start Acquisition
-    if(ADCON0bits.DONE == 0){
-        TEMPH = ADRESH;         //Save ADRESH and ADRESL on TEMPH and TEMPL
-        TEMPL = ADRESL;   
-    }
-   
-}
 
 
 /*
@@ -262,15 +252,7 @@ void update_temp(){
  *  
  */
 
-void update_pot(){
-    ADCON0 = 0b00000000;    //Configure ADCON0 to use AN0 with Potentiometer
-    ADCON0bits.ADON = 1;        //Start ADC
-    ADCON0bits.GO = 1;          //Start Acquisition
-    if(ADCON0bits.DONE == 0){
-        POTH = ADRESH;         //Save ADRESH and ADRESL on TEMPH and TEMPL
-        POTL = ADRESL;   
-    }    
-}
+
 
 /******************************************************************************
  * HiPriISR interrupt service routine
@@ -305,8 +287,9 @@ void __interrupt(low_priority) LoPriISR(void)
             CCP4handler();
             continue;
         }
-        if( PIR1bits.ADIF ){
-            
+        if( PIR1bits.ADIF ){    //ADC acquisition finished
+            read_ADC();
+            continue;
         }
         
         // restore temp copies of WREG, STATUS and BSR if needed.
@@ -368,7 +351,7 @@ void CCP4handler(){
 
 void read_ADC(){
     bufferL = ADRESL;                   //Save low/high values of ADC
-    bufferH = aDRESH;  
+    bufferH = ADRESH;  
     adc_val = (bufferH << 8) | bufferL; //Concatenate high and low bytes 
     ADCON0 = current_sensor;            //Configure ADCON0 to read current sensor;
     ADCON0bits.GO = 1;                  //Start acquisition
