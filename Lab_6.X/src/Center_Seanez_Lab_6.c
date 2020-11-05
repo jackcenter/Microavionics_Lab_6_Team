@@ -79,6 +79,7 @@ void init_LCD(void);
 void init_TMR0(void);
 void init_TMR1(void);
 void init_CCP4(void);
+void init_ADC(void);
 void TMR0handler(void);     // Interrupt handler for TMR0, typo in main
 void CCP4handler(void);
 void update_temp(void);
@@ -113,6 +114,7 @@ void init() {
     init_TMR0();        // blink alive
     init_TMR1();        // update LCD
     init_CCP4();        // update LCD
+    init_ADC();         // initialize ADC
 }
 
 
@@ -185,13 +187,31 @@ void init_CCP4(){
     PIE4bits.CCP4IE = 1;    // enable
 }
 
+void init_ADC(){
+    ADCON0 = 0b00001100;    //Configure ADCON0 to use AN3 with Temp Sensor or ____
+    ADCON1 = 0b00000000;    //Configure ADCON1 for AVdd(GND) and AVss(3.3V)
+    ADCON2 = 0b10010101;    //Configure ADCON2 for right justified; Tacq = 4Tad 
+                            //and Tad = 14Tosc
+    ANCON0bits.ANSEL3 = 1;  //Configure AN3 as analog input -- TEMP SENSOR
+    TRISAbits.TRISA3 = 1;   //Configure TRIS register as INPUT RA3 -- TEMP SENSOR
+
+    ANCON0bits.ANSEL0 = 1;  //Configure AN0 as analog inut
+    TRISAbits.TRISA0 = 1;
+}
 /*
  * update_temp()
  *  
  */
 
 void update_temp(){
-    
+    ADCON0 = 0b00001100;    //Configure ADCON0 to use AN3 with Temp Sensor
+    ADCON0bits.ADON = 1;        //Start ADC
+    ADCON0bits.GO = 1;          //Start Acquisition
+    if(ADCON0bits.DONE == 0){
+        TEMPH = ADRESH;         //Save ADRESH and ADRESL on TEMPH and TEMPL
+        TEMPL = ADRESL;   
+    }
+   
 }
 
 
@@ -201,6 +221,13 @@ void update_temp(){
  */
 
 void update_pot(){
+    ADCON0 = 0b00000000;    //Configure ADCON0 to use AN3 with Temp Sensor
+    ADCON0bits.ADON = 1;        //Start ADC
+    ADCON0bits.GO = 1;          //Start Acquisition
+    if(ADCON0bits.DONE == 0){
+        POTH = ADRESH;         //Save ADRESH and ADRESL on TEMPH and TEMPL
+        POTL = ADRESL;   
+    }
     
 }
 
