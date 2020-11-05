@@ -188,7 +188,6 @@ void init_CCP4(){
 }
 
 void init_ADC(){
-    ADCON0 = 0b00001100;    //Configure ADCON0 to use AN3 with Temp Sensor or ____
     ADCON1 = 0b00000000;    //Configure ADCON1 for AVdd(GND) and AVss(3.3V)
     ADCON2 = 0b10010101;    //Configure ADCON2 for right justified; Tacq = 4Tad 
                             //and Tad = 14Tosc
@@ -221,14 +220,13 @@ void update_temp(){
  */
 
 void update_pot(){
-    ADCON0 = 0b00000000;    //Configure ADCON0 to use AN3 with Temp Sensor
+    ADCON0 = 0b00000000;    //Configure ADCON0 to use AN0 with Potentiometer
     ADCON0bits.ADON = 1;        //Start ADC
     ADCON0bits.GO = 1;          //Start Acquisition
     if(ADCON0bits.DONE == 0){
         POTH = ADRESH;         //Save ADRESH and ADRESL on TEMPH and TEMPL
         POTL = ADRESL;   
-    }
-    
+    }    
 }
 
 
@@ -297,7 +295,7 @@ void TMR0handler() {
 /******************************************************************************
  * CCP4handler interrupt service routine.
  *
- * Handles updating the LCD approximatly every 130ms
+ * Handles updating the LCD approximately every 130ms
  ******************************************************************************/
 void CCP4handler(){
        
