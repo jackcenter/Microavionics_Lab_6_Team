@@ -270,7 +270,7 @@ void TMR0handler() {
 /******************************************************************************
  * CCP4handler interrupt service routine.
  *
- * Handles updating the LCD approximately every 130ms
+ * Handles updating the LCD approximatly every 130ms
  ******************************************************************************/
 void CCP4handler(){
        
