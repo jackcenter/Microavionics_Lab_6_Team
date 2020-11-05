@@ -132,8 +132,8 @@ void main() {
             
             reading_count = 0;
         }
-        
-        new_reading == 0;
+
+        new_reading = 0;
     }
 }
 
