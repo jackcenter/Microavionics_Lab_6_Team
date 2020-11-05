@@ -156,8 +156,6 @@ void init() {
     init_TMR1();        // update LCD
     init_CCP4();        // update LCD
     init_ADC();         // initialize ADC
-    
-    current_val = _POT;
 }
 
 
@@ -246,33 +244,33 @@ void init_ADC(){
  *  
  */
 
-void update_temp(){
-    ADCON0 = 0b00001100;    //Configure ADCON0 to use AN3 with Temp Sensor
-    ADCON0bits.ADON = 1;        //Start ADC
-    ADCON0bits.GO = 1;          //Start Acquisition
-    if(ADCON0bits.DONE == 0){
-        TEMPH = ADRESH;         //Save ADRESH and ADRESL on TEMPH and TEMPL
-        TEMPL = ADRESL;   
-    }
-   
-}
-
-
-/*
- * update_LCD()
- *  
- */
-
-void update_pot(){
-    ADCON0 = 0b00000000;    //Configure ADCON0 to use AN3 with Temp Sensor
-    ADCON0bits.ADON = 1;        //Start ADC
-    ADCON0bits.GO = 1;          //Start Acquisition
-    if(ADCON0bits.DONE == 0){
-        POTH = ADRESH;         //Save ADRESH and ADRESL on TEMPH and TEMPL
-        POTL = ADRESL;   
-    }
-    
-}
+//void update_temp(){
+//    ADCON0 = 0b00001100;    //Configure ADCON0 to use AN3 with Temp Sensor
+//    ADCON0bits.ADON = 1;        //Start ADC
+//    ADCON0bits.GO = 1;          //Start Acquisition
+//    if(ADCON0bits.DONE == 0){
+//        TEMPH = ADRESH;         //Save ADRESH and ADRESL on TEMPH and TEMPL
+//        TEMPL = ADRESL;   
+//    }
+//   
+//}
+//
+//
+///*
+// * update_LCD()
+// *  
+// */
+//
+//void update_pot(){
+//    ADCON0 = 0b00000000;    //Configure ADCON0 to use AN3 with Temp Sensor
+//    ADCON0bits.ADON = 1;        //Start ADC
+//    ADCON0bits.GO = 1;          //Start Acquisition
+//    if(ADCON0bits.DONE == 0){
+//        POTH = ADRESH;         //Save ADRESH and ADRESL on TEMPH and TEMPL
+//        POTL = ADRESL;   
+//    }
+//    
+//}
 
 
 /******************************************************************************
@@ -361,6 +359,6 @@ void CCP4handler(){
     PIR4bits.CCP4IF = 0;
     
     // TODO: Testing, delete when update functions are added
-    temp_val += 1;
-    pot_val += 1;
+//    temp_val += 1;
+//    pot_val += 1;
 }
