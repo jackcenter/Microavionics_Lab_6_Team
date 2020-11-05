@@ -60,6 +60,8 @@
 
 
 #define _XTAL_FREQ 16000000   //Required in XC8 for delays. 16 Mhz oscillator clock
+#define _TEMP 0b00001100
+#define _POT 0b00000000
 #pragma config FOSC=HS1, PWRTEN=ON, BOREN=ON, BORV=2, PLLCFG=OFF
 #pragma config WDTEN=OFF, CCP2MX=PORTC, XINST=OFF
 
@@ -68,6 +70,11 @@
  ******************************************************************************/
 short temp_val = 100;
 short pot_val = 100;
+char bufferH = 0;
+char bufferL = 0;
+short adc_val = 0;
+char current_sensor = _POT;
+char new_reading = 0;
 const unsigned short ccp4_time = 65000;           // 16ms worth of instructions
 
 /******************************************************************************
@@ -82,6 +89,7 @@ void init_CCP4(void);
 void init_ADC(void);
 void TMR0handler(void);     // Interrupt handler for TMR0, typo in main
 void CCP4handler(void);
+void read_ADC(void);
 void update_temp(void);
 void update_pot(void);
 
@@ -89,11 +97,45 @@ void update_pot(void);
  * main()
  ******************************************************************************/
 void main() {
-    init();                 
+    init(); 
+    char reading_count = 0;
+    char measurements_max = 1;
+    
     while(1) {
-        update_temp();
-        update_pot();
-     }
+        while (new_reading == 0) {}
+        
+        if (reading_count == 0){   
+            // discard first reading
+            reading_count = 1;           
+        }
+        
+        else if (current_sensor == _POT){
+            // update the pot value with adc value
+            pot_val = adc_val;
+            reading_count += 1;
+        }
+        
+        else if (current_sensor == _TEMP){
+            // update the temp value with adc value
+            temp_val = adc_val;
+            reading_count += 1;
+        }
+        
+        if (reading_count > measurements_max){
+            // swap sensors
+            if (current_sensor == _TEMP) {
+                current_sensor = _POT;
+            }
+            
+            else if (current_sensor == _POT){
+                current_sensor = _TEMP;
+            }
+            
+            reading_count = 0;
+        }
+        
+        new_reading == 0;
+    }
 }
 
 /******************************************************************************
@@ -202,6 +244,7 @@ void init_ADC(){
  *  
  */
 
+
 void update_temp(){
     ADCON0 = 0b00001100;    //Configure ADCON0 to use AN3 with Temp Sensor
     ADCON0bits.ADON = 1;        //Start ADC
@@ -228,7 +271,6 @@ void update_pot(){
         POTL = ADRESL;   
     }    
 }
-
 
 /******************************************************************************
  * HiPriISR interrupt service routine
@@ -263,6 +305,10 @@ void __interrupt(low_priority) LoPriISR(void)
             CCP4handler();
             continue;
         }
+        if( PIR1bits.ADIF ){
+            
+        }
+        
         // restore temp copies of WREG, STATUS and BSR if needed.
         break;     
     }
@@ -316,6 +362,16 @@ void CCP4handler(){
     PIR4bits.CCP4IF = 0;
     
     // TODO: Testing, delete when update functions are added
-    temp_val += 1;
-    pot_val += 1;
+//    temp_val += 1;
+//    pot_val += 1;
+}
+
+void read_ADC(){
+    bufferL = ADRESL;                   //Save low/high values of ADC
+    bufferH = aDRESH;  
+    adc_val = (bufferH << 8) | bufferL; //Concatenate high and low bytes 
+    ADCON0 = current_sensor;            //Configure ADCON0 to read current sensor;
+    ADCON0bits.GO = 1;                  //Start acquisition
+    new_reading = 0;
+    PIR1bits.ADIF = 0;                  //Clear ADC flag
 }
