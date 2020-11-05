@@ -60,6 +60,8 @@
 
 
 #define _XTAL_FREQ 16000000   //Required in XC8 for delays. 16 Mhz oscillator clock
+#define _TEMP 0b00001100
+#define _POT 0b00000000
 #pragma config FOSC=HS1, PWRTEN=ON, BOREN=ON, BORV=2, PLLCFG=OFF
 #pragma config WDTEN=OFF, CCP2MX=PORTC, XINST=OFF
 
@@ -68,6 +70,11 @@
  ******************************************************************************/
 short temp_val = 100;
 short pot_val = 100;
+char bufferH = 0;
+char bufferL = 0;
+short adc_val = 0;
+char current_sensor = _POT;
+char new_reading = 0;
 const unsigned short ccp4_time = 65000;           // 16ms worth of instructions
 
 /******************************************************************************
@@ -89,11 +96,45 @@ void update_pot(void);
  * main()
  ******************************************************************************/
 void main() {
-    init();                 
+    init(); 
+    char reading_count = 0;
+    char measurements_max = 1;
+    
     while(1) {
-        update_temp();
-        update_pot();
-     }
+        while (new_reading == 0) {}
+        
+        if (reading_count == 0){   
+            // discard first reading
+            reading_count = 1;           
+        }
+        
+        else if (current_sensor == _POT){
+            // update the pot value with adc value
+            pot_val = adc_val;
+            reading_count += 1;
+        }
+        
+        else if (current_sensor == _TEMP){
+            // update the temp value with adc value
+            temp_val = adc_val;
+            reading_count += 1;
+        }
+        
+        if (reading_count > measurements_max){
+            // swap sensors
+            if (current_sensor == _TEMP) {
+                current_sensor = _POT;
+            }
+            
+            else if (current_sensor == _POT){
+                current_sensor = _TEMP;
+            }
+            
+            reading_count = 0;
+        }
+        
+        new_reading == 0;
+    }
 }
 
 /******************************************************************************
@@ -115,6 +156,8 @@ void init() {
     init_TMR1();        // update LCD
     init_CCP4();        // update LCD
     init_ADC();         // initialize ADC
+    
+    current_val = _POT;
 }
 
 
