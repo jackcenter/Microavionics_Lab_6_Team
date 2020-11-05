@@ -89,6 +89,7 @@ void init_CCP4(void);
 void init_ADC(void);
 void TMR0handler(void);     // Interrupt handler for TMR0, typo in main
 void CCP4handler(void);
+void read_ADC(void);
 void update_temp(void);
 void update_pot(void);
 
@@ -229,7 +230,6 @@ void init_CCP4(){
 }
 
 void init_ADC(){
-    ADCON0 = 0b00001100;    //Configure ADCON0 to use AN3 with Temp Sensor or ____
     ADCON1 = 0b00000000;    //Configure ADCON1 for AVdd(GND) and AVss(3.3V)
     ADCON2 = 0b10010101;    //Configure ADCON2 for right justified; Tacq = 4Tad 
                             //and Tad = 14Tosc
@@ -244,33 +244,14 @@ void init_ADC(){
  *  
  */
 
-//void update_temp(){
-//    ADCON0 = 0b00001100;    //Configure ADCON0 to use AN3 with Temp Sensor
-//    ADCON0bits.ADON = 1;        //Start ADC
-//    ADCON0bits.GO = 1;          //Start Acquisition
-//    if(ADCON0bits.DONE == 0){
-//        TEMPH = ADRESH;         //Save ADRESH and ADRESL on TEMPH and TEMPL
-//        TEMPL = ADRESL;   
-//    }
-//   
-//}
-//
-//
-///*
-// * update_LCD()
-// *  
-// */
-//
-//void update_pot(){
-//    ADCON0 = 0b00000000;    //Configure ADCON0 to use AN3 with Temp Sensor
-//    ADCON0bits.ADON = 1;        //Start ADC
-//    ADCON0bits.GO = 1;          //Start Acquisition
-//    if(ADCON0bits.DONE == 0){
-//        POTH = ADRESH;         //Save ADRESH and ADRESL on TEMPH and TEMPL
-//        POTL = ADRESL;   
-//    }
-//    
-//}
+
+
+
+/*
+ * update_LCD()
+ *  
+ */
+
 
 
 /******************************************************************************
@@ -306,6 +287,11 @@ void __interrupt(low_priority) LoPriISR(void)
             CCP4handler();
             continue;
         }
+        if( PIR1bits.ADIF ){    //ADC acquisition finished
+            read_ADC();
+            continue;
+        }
+        
         // restore temp copies of WREG, STATUS and BSR if needed.
         break;     
     }
@@ -338,7 +324,7 @@ void TMR0handler() {
 /******************************************************************************
  * CCP4handler interrupt service routine.
  *
- * Handles updating the LCD approximatly every 130ms
+ * Handles updating the LCD approximately every 130ms
  ******************************************************************************/
 void CCP4handler(){
        
@@ -361,4 +347,14 @@ void CCP4handler(){
     // TODO: Testing, delete when update functions are added
 //    temp_val += 1;
 //    pot_val += 1;
+}
+
+void read_ADC(){
+    bufferL = ADRESL;                   //Save low/high values of ADC
+    bufferH = ADRESH;  
+    adc_val = (bufferH << 8) | bufferL; //Concatenate high and low bytes 
+    ADCON0 = current_sensor;            //Configure ADCON0 to read current sensor;
+    ADCON0bits.GO = 1;                  //Start acquisition
+    new_reading = 0;
+    PIR1bits.ADIF = 0;                  //Clear ADC flag
 }
