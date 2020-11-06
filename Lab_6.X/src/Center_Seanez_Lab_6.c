@@ -60,16 +60,16 @@
 
 
 #define _XTAL_FREQ 16000000   //Required in XC8 for delays. 16 Mhz oscillator clock
-#define _TEMP 0b00001100
-#define _POT 0b00000000
+#define _TEMP 0b00001101
+#define _POT 0b00000001
 #pragma config FOSC=HS1, PWRTEN=ON, BOREN=ON, BORV=2, PLLCFG=OFF
 #pragma config WDTEN=OFF, CCP2MX=PORTC, XINST=OFF
 
 /******************************************************************************
  * Global variables
  ******************************************************************************/
-short temp_val = 100;
-short pot_val = 100;
+short temp_val = 0;
+short pot_val = 0;
 char bufferH = 0;
 char bufferL = 0;
 short adc_val = 0;
@@ -236,21 +236,17 @@ void init_ADC(){
     ANCON0bits.ANSEL3 = 1;  //Configure AN3 as analog input -- TEMP SENSOR
     TRISAbits.TRISA3 = 1;   //Configure TRIS register as INPUT RA3 -- TEMP SENSOR
 
-    ANCON0bits.ANSEL0 = 1;  //Configure AN0 as analog inut
+    ANCON0bits.ANSEL0 = 1;  //Configure AN0 as analog input
     TRISAbits.TRISA0 = 1;
+    
+    PIR1bits.ADIF = 0;
+    PIE1bits.ADIE = 1;
+    IPR1bits.ADIP = 0;
+    
+    ADCON0 = _POT;
+    ADCON0bits.GO = 1;
 }
-/*
- * update_temp()
- *  
- */
 
-
-
-
-/*
- * update_LCD()
- *  
- */
 
 
 
@@ -287,7 +283,7 @@ void __interrupt(low_priority) LoPriISR(void)
             CCP4handler();
             continue;
         }
-        if( PIR1bits.ADIF ){    //ADC acquisition finished
+        else if( PIR1bits.ADIF ){    //ADC acquisition finished
             read_ADC();
             continue;
         }
@@ -355,6 +351,6 @@ void read_ADC(){
     adc_val = (bufferH << 8) | bufferL; //Concatenate high and low bytes 
     ADCON0 = current_sensor;            //Configure ADCON0 to read current sensor;
     ADCON0bits.GO = 1;                  //Start acquisition
-    new_reading = 0;
+    new_reading = 1;
     PIR1bits.ADIF = 0;                  //Clear ADC flag
 }
