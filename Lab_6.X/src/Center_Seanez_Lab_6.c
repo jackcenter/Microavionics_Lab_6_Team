@@ -1,3 +1,6 @@
+// TODO: Acquisition time is off, the POT is changing the TEMP val on the
+//       LCD
+// TODO: Convert temp_val to actual temperature values in the LCD interrupt
 
 /****** ASEN 4/5067 Lab 6 ******************************************************
  * Author: Jack Center and Marcela Seanez
@@ -334,9 +337,10 @@ void CCP4handler(){
     sprintf(temp_str, "%d", temp_val);
     
     if (pot_val_temp < 100){
+        // value does not take up 3 digits, need to add leading 0
         pot_str[2] = pot_str[1];
         pot_str[1] = pot_str[0];
-        pot_str[0] = 0x30;
+        pot_str[0] = '0';
     }
     
     char temp_LCD[6] = {0x85, temp_str[0], temp_str[1],'.',temp_str[2],0x00};
