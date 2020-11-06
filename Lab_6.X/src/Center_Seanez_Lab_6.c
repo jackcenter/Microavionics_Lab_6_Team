@@ -323,12 +323,21 @@ void TMR0handler() {
  * Handles updating the LCD approximately every 130ms
  ******************************************************************************/
 void CCP4handler(){
-       
+    
+    // 12^2 bins from 0 to 3.3V -> current bin * 3.3/4096 = volts
+    short pot_val_temp = 0.0806 * pot_val;   
+    
     char pot_str[4]; 
     char temp_str[4];
     
-    sprintf(pot_str, "%d", pot_val);
+    sprintf(pot_str, "%d", pot_val_temp);
     sprintf(temp_str, "%d", temp_val);
+    
+    if (pot_val_temp < 100){
+        pot_str[2] = pot_str[1];
+        pot_str[1] = pot_str[0];
+        pot_str[0] = 0x30;
+    }
     
     char temp_LCD[6] = {0x85, temp_str[0], temp_str[1],'.',temp_str[2],0x00};
     char pot_LCD[6] = {0xC5, pot_str[0], '.', pot_str[1] ,pot_str[2],0x00};
