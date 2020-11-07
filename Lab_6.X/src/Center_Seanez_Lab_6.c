@@ -77,6 +77,7 @@ char bufferH = 0;
 char bufferL = 0;
 short adc_val = 0;
 char current_sensor = _POT;
+char previous_sensor = _POT;
 char new_reading = 0;
 const unsigned short ccp4_time = 65000;           // 16ms worth of instructions
 
@@ -102,14 +103,15 @@ void update_pot(void);
 void main() {
     init(); 
     char reading_count = 0;
-    char measurements_max = 1;
+    char throw_away = 2;            // measurements to throw away
+    char measurements_max = 2;      // measurements to keep
     
     while(1) {
         while (new_reading == 0) {}
         
-        if (reading_count == 0){   
+        if (reading_count < throw_away){   
             // discard first reading
-            reading_count = 1;           
+            reading_count += 1;           
         }
         
         else if (current_sensor == _POT){
@@ -133,11 +135,11 @@ void main() {
             else if (current_sensor == _POT){
                 current_sensor = _TEMP;
             }
-            
+//            __delay_us(6);
             reading_count = 0;
         }
 
-        new_reading = 0;
+        new_reading = 0; 
     }
 }
 
@@ -235,7 +237,7 @@ void init_CCP4(){
 void init_ADC(){
     ADCON1 = 0b00000000;    //Configure ADCON1 for AVdd(GND) and AVss(3.3V)
     ADCON2 = 0b10010101;    //Configure ADCON2 for right justified; Tacq = 4Tad 
-                            //and Tad = 14Tosc
+                            //and Tad = 16Tosc
     ANCON0bits.ANSEL3 = 1;  //Configure AN3 as analog input -- TEMP SENSOR
     TRISAbits.TRISA3 = 1;   //Configure TRIS register as INPUT RA3 -- TEMP SENSOR
 
@@ -286,6 +288,7 @@ void __interrupt(low_priority) LoPriISR(void)
             CCP4handler();
             continue;
         }
+        
         else if( PIR1bits.ADIF ){    //ADC acquisition finished
             read_ADC();
             continue;
@@ -328,15 +331,23 @@ void TMR0handler() {
 void CCP4handler(){
     
     // 12^2 bins from 0 to 3.3V -> current bin * 3.3/4096 = volts
-    short pot_val_temp = 0.0806 * pot_val;   
+    short pot_val_temp = 0.0806 * pot_val;  
+    short temp_val_temp = temp_val;   
     
     char pot_str[4]; 
     char temp_str[4];
     
     sprintf(pot_str, "%d", pot_val_temp);
-    sprintf(temp_str, "%d", temp_val);
+    sprintf(temp_str, "%d", temp_val_temp);
+
+    if (pot_val_temp < 10){
+        // value does not take up 3 digits, need to add leading 0
+        pot_str[2] = pot_str[0];
+        pot_str[1] = '0';
+        pot_str[0] = '0';
+    }
     
-    if (pot_val_temp < 100){
+    else if (pot_val_temp < 100){
         // value does not take up 3 digits, need to add leading 0
         pot_str[2] = pot_str[1];
         pot_str[1] = pot_str[0];
@@ -359,11 +370,18 @@ void CCP4handler(){
 }
 
 void read_ADC(){
+    bufferH = ADRESH;
     bufferL = ADRESL;                   //Save low/high values of ADC
-    bufferH = ADRESH;  
-    adc_val = (bufferH << 8) | bufferL; //Concatenate high and low bytes 
+    adc_val = (bufferH << 8) | bufferL; //Concatenate high and low bytes     
     ADCON0 = current_sensor;            //Configure ADCON0 to read current sensor;
+//     if current_sensor != previous_sensor => wait 2us (~= 2.45 - 2*.25)
+//    if (current_sensor != previous_sensor){
+//        ADCON0 = current_sensor;            //Configure ADCON0 to read current sensor;
+//        previous_sensor = current_sensor;
+//        __delay_us(50);
+//    }
+
     ADCON0bits.GO = 1;                  //Start acquisition
-    new_reading = 1;
     PIR1bits.ADIF = 0;                  //Clear ADC flag
+    new_reading = 1;
 }
