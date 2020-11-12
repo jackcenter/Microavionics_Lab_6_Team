@@ -273,6 +273,21 @@ void init_USART(){
 }
 
 void init_SPI(){
+    TRISCbits.TRISC5 = 0;       //SD0 --> output (RC5)
+    TRISCbits.TRISC4 = 1;       //SD1 --> input (RC4)
+    TRISCbits.TRISC3 = 0;       //SCK --> output (RC3)
+    
+    SSP1STAT = 0b00000000;      //Initialize SSP1STAT
+    SSP1STATbits.SMP = 1;
+    SSP1STATbits.CKE = 0;       //CKE 0 for Mode(0,0) or 1 for Mode(1,1)
+    SSP1STATbits.BF = 0;        //Clears automatically after BF=1 
+    
+    SSP1CON1bits.WCOL = 0;      //if BF=1 --> WCOL=1 must be CLEARED
+    SSP1CON1bits.SSPOV = 0;
+    SSP1CON1bits.SSPEN = 1;
+    SSP1CON1bits.CKP = 1;       //CKP 1 for Mode(0,0) or 0 for Mode(1,1)
+    // MSSP -- Need to figure out clock frequency
+    
 
 }
 
