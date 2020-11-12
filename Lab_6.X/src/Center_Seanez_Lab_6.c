@@ -125,38 +125,6 @@ void main() {
             read_USART();
             flag_USART_rx = 0;
         }
-            
-//        if (reading_count < throw_away){   
-//            // discard first reading
-//            reading_count += 1;           
-//        }
-//        
-//        else if (current_sensor == _POT){
-//            // update the pot value with adc value
-//            pot_val = adc_val;
-//            reading_count += 1;
-//        }
-//        
-//        else if (current_sensor == _TEMP){
-//            // update the temp value with adc value
-//            temp_val = adc_val;
-//            reading_count += 1;
-//        }
-//        
-//        if (reading_count > measurements_max){
-//            // swap sensors
-//            if (current_sensor == _TEMP) {
-//                current_sensor = _POT;
-//            }
-//            
-//            else if (current_sensor == _POT){
-//                current_sensor = _TEMP;
-//            }
-////            __delay_us(6);
-//            reading_count = 0;
-//        }
-//
-//        new_reading = 0; 
     }
 }
 
@@ -269,6 +237,11 @@ void init_ADC(){
 }
 
 void init_USART(){
+    TRISCbits = 0b10111111;     //RC6 tx, RC7 rx
+    TXSTA1 = 0b10100000
+    //RCSTA1;
+    RCSTA1bits.SPEN = 1;
+    BAUDCON1;
     
 }
 
