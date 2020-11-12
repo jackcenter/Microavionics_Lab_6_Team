@@ -78,7 +78,8 @@ char bufferL = 0;
 short adc_val = 0;
 char current_sensor = _POT;
 char previous_sensor = _POT;
-char new_reading = 0;
+char flag_adc_reading = 0;
+char flag_USART_rx = 0;
 const unsigned short ccp4_time = 65000;           // 16ms worth of instructions
 
 /******************************************************************************
@@ -91,11 +92,16 @@ void init_TMR0(void);
 void init_TMR1(void);
 void init_CCP4(void);
 void init_ADC(void);
+void init_USART(void);
+void init_SPI(void);
+void get_adc_reading(char*, const char*, const char *);
+void read_USART(void);
 void TMR0handler(void);     // Interrupt handler for TMR0, typo in main
 void CCP4handler(void);
 void read_ADC(void);
-void update_temp(void);
-void update_pot(void);
+//void update_temp(void);
+//void update_pot(void);
+
 
 /******************************************************************************
  * main()
@@ -107,39 +113,50 @@ void main() {
     char measurements_max = 2;      // measurements to keep
     
     while(1) {
-        while (new_reading == 0) {}
-        
-        if (reading_count < throw_away){   
-            // discard first reading
-            reading_count += 1;           
-        }
-        
-        else if (current_sensor == _POT){
-            // update the pot value with adc value
-            pot_val = adc_val;
-            reading_count += 1;
-        }
-        
-        else if (current_sensor == _TEMP){
-            // update the temp value with adc value
-            temp_val = adc_val;
-            reading_count += 1;
-        }
-        
-        if (reading_count > measurements_max){
-            // swap sensors
-            if (current_sensor == _TEMP) {
-                current_sensor = _POT;
-            }
-            
-            else if (current_sensor == _POT){
-                current_sensor = _TEMP;
-            }
-//            __delay_us(6);
-            reading_count = 0;
-        }
+        // loop here and check our flags for actions
 
-        new_reading = 0; 
+//        while (new_reading == 0) {}
+        if (flag_adc_reading != 0){
+            get_adc_reading(&reading_count, &throw_away, &measurements_max);
+            flag_adc_reading = 0;
+        }
+        
+        if (flag_USART_rx != 0){
+            read_USART();
+            flag_USART_rx = 0;
+        }
+            
+//        if (reading_count < throw_away){   
+//            // discard first reading
+//            reading_count += 1;           
+//        }
+//        
+//        else if (current_sensor == _POT){
+//            // update the pot value with adc value
+//            pot_val = adc_val;
+//            reading_count += 1;
+//        }
+//        
+//        else if (current_sensor == _TEMP){
+//            // update the temp value with adc value
+//            temp_val = adc_val;
+//            reading_count += 1;
+//        }
+//        
+//        if (reading_count > measurements_max){
+//            // swap sensors
+//            if (current_sensor == _TEMP) {
+//                current_sensor = _POT;
+//            }
+//            
+//            else if (current_sensor == _POT){
+//                current_sensor = _TEMP;
+//            }
+////            __delay_us(6);
+//            reading_count = 0;
+//        }
+//
+//        new_reading = 0; 
     }
 }
 
@@ -223,7 +240,6 @@ void init_TMR1(){
     T1CONbits.TMR1ON = 1;           // Turn on TMR1
 }
 
-
 void init_CCP4(){
   
     CCP4CON = 0b00001010;
@@ -252,9 +268,49 @@ void init_ADC(){
     ADCON0bits.GO = 1;
 }
 
+void init_USART(){
+    
+}
 
+void init_SPI(){
 
+}
 
+void get_adc_reading(char *count, const char *throw, const char *meas_max){
+    if (count < throw){   
+            // discard first reading
+            count += 1;           
+        }
+        
+        else if (current_sensor == _POT){
+            // update the pot value with adc value
+            pot_val = adc_val;
+            count += 1;
+        }
+        
+        else if (current_sensor == _TEMP){
+            // update the temp value with adc value
+            temp_val = adc_val;
+            count += 1;
+        }
+        
+        if (count > meas_max){
+            // swap sensors
+            if (current_sensor == _TEMP) {
+                current_sensor = _POT;
+            }
+            
+            else if (current_sensor == _POT){
+                current_sensor = _TEMP;
+            }
+//            __delay_us(6);
+            count = 0;
+        }
+}
+
+void read_USART(){
+    
+}
 /******************************************************************************
  * HiPriISR interrupt service routine
  *
@@ -381,7 +437,7 @@ void read_ADC(){
 //        __delay_us(50);
 //    }
 
-    ADCON0bits.GO = 1;                  //Start acquisition
+    ADCON0bits.GO = 1;                  //Start acquisition then conversion
     PIR1bits.ADIF = 0;                  //Clear ADC flag
-    new_reading = 1;
+    flag_adc_reading = 1;
 }
