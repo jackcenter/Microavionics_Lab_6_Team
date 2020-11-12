@@ -276,25 +276,25 @@ void init_SPI(){
 
 }
 
-void get_adc_reading(char *count, const char *throw, const char *meas_max){
-    if (count < throw){   
+void get_adc_reading(char* count, const char* throw, const char* meas_max){
+    if (*count < *throw){   
             // discard first reading
-            count += 1;           
+            *count += 1;           
         }
         
         else if (current_sensor == _POT){
             // update the pot value with adc value
             pot_val = adc_val;
-            count += 1;
+            *count += 1;
         }
         
         else if (current_sensor == _TEMP){
             // update the temp value with adc value
             temp_val = adc_val;
-            count += 1;
+            *count += 1;
         }
         
-        if (count > meas_max){
+        if (*count > *meas_max){
             // swap sensors
             if (current_sensor == _TEMP) {
                 current_sensor = _POT;
@@ -304,7 +304,7 @@ void get_adc_reading(char *count, const char *throw, const char *meas_max){
                 current_sensor = _TEMP;
             }
 //            __delay_us(6);
-            count = 0;
+            *count = 0;
         }
 }
 
@@ -388,7 +388,7 @@ void CCP4handler(){
     
     // 12^2 bins from 0 to 3.3V -> current bin * 3.3/4096 = volts
     short pot_val_temp = 0.0806 * pot_val;  
-    short temp_val_temp = temp_val;   
+    short temp_val_temp = 0.806 * temp_val;   
     
     char pot_str[4]; 
     char temp_str[4];
