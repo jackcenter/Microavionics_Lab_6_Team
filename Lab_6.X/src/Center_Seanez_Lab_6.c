@@ -237,8 +237,8 @@ void init_ADC(){
 }
 
 void init_USART(){
-    TRISCbits = 0b10111111;     //RC6 tx, RC7 rx
-    TXSTA1 = 0b10100000
+    TRISC = 0b10111111;     //RC6 tx, RC7 rx
+    TXSTA1 = 0b10100000;
     //RCSTA1;
     RCSTA1bits.SPEN = 1;
     BAUDCON1;
