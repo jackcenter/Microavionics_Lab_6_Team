@@ -237,12 +237,13 @@ void init_ADC(){
 }
 
 void init_USART(){
-    TRISC = 0b10111111;     //RC6 tx, RC7 rx
+    TRISC = 0x00;     //RC6 tx, RC7 rx
     TXSTA1 = 0b10100000;
     //RCSTA1;
     RCSTA1bits.SPEN = 1;
-    BAUDCON1;
-    
+    BAUDCON1 = 0b00000000;
+    SPBRGH1 = 0;
+    SPBRG1 = 12;
 }
 
 void init_SPI(){
