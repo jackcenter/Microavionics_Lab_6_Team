@@ -85,7 +85,7 @@ const unsigned short ccp4_time = 65000;           // 16ms worth of instructions
 /******************************************************************************
  * Function prototypes
  ******************************************************************************/
-void init(void);         // Function to initialize hardware and interrupts
+void init(void);         
 void init_lights(void);
 void init_LCD(void);
 void init_TMR0(void);
@@ -96,11 +96,9 @@ void init_USART(void);
 void init_SPI(void);
 void get_adc_reading(char*, const char*, const char *);
 void read_USART(void);
-void TMR0handler(void);     // Interrupt handler for TMR0, typo in main
+void TMR0handler(void);     
 void CCP4handler(void);
 void read_ADC(void);
-//void update_temp(void);
-//void update_pot(void);
 
 
 /******************************************************************************

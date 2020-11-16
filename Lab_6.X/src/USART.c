@@ -22,16 +22,15 @@
 /******************************************************************************
  * Global variables
  ******************************************************************************/
-char test = 0;
-char tx_string[STR_MAX + 25];
+static char tx_string[STR_MAX + 25];
 //char error_str[STR_MAX + 25];
-char tx_pos = 0;
-char end_tx = 0;
+static char tx_pos = 0;
+static char end_tx = 0;
 
-char rx_string[STR_MAX];
-char rx_buffer[STR_MAX];
-char rx_pos = 0;
-char new_rx = 0;
+static char rx_string[STR_MAX];
+static char rx_buffer[STR_MAX];
+static char rx_pos = 0;
+static char new_rx = 0;
 
 /******************************************************************************
  * Function prototypes
@@ -71,9 +70,7 @@ void init(){
 }
 
 
-void init_USART(){
-//    memset(rx_string, '\0', sizeof(rx_string));
-    
+void init_USART(){  
     TRISCbits.TRISC7 = 1;           // RX
     TRISCbits.TRISC6 = 0;           // TX
     // TXSTA1 = 0b00100000;         // Tx on
@@ -159,7 +156,7 @@ void RxUsartHandler(){
         return;
     }
     
-    rx_buffer[rx_pos] = RCREG1;     // should clear the flag by itself?
+    rx_buffer[rx_pos] = RCREG1;    
     
     if (rx_buffer[rx_pos] == '\n'){
         strncpy(rx_string, rx_buffer, rx_pos+1);
