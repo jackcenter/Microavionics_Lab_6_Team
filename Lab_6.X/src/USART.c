@@ -17,17 +17,19 @@
 #pragma config WDTEN=OFF, CCP2MX=PORTC, XINST=OFF
 
 #define _XTAL_FREQ 16000000   //16 Mhz oscillator clock
+#define STR_MAX 9
 
 /******************************************************************************
  * Global variables
  ******************************************************************************/
-char tx_string[10];
-char tx_buffer[10];
+char test = 0;
+char tx_string[STR_MAX];
+char tx_buffer[STR_MAX];
 char tx_pos = 0;
 char end_tx = 0;
 
-char rx_string[10];
-char rx_buffer[10];
+char rx_string[STR_MAX];
+char rx_buffer[STR_MAX];
 char rx_pos = 0;
 char new_rx = 0;
 
@@ -38,6 +40,7 @@ void init(void);
 void init_USART(void);
 void TxUsartHandler(void);
 void RxUsartHandler(void);
+void read_usart_str(void);
 
 /******************************************************************************
  * main()
@@ -46,7 +49,10 @@ void main(void) {
     init();
     
     while(1){
-
+        if (new_rx == 1){
+            read_usart_str();
+            new_rx = 0;
+        }
     }
     
     return;
@@ -74,6 +80,31 @@ void init_USART(){
    
 //    PIE1bits.TX1IE = 1;
     PIE1bits.RC1IE = 1;
+}
+
+
+void read_usart_str(){
+    if (strncmp(rx_string, "TEMP", 4) == 0){
+        strncpy(tx_string, rx_string, sizeof(tx_string));
+    }
+    
+    else if (strncmp(rx_string, "POT", 3) == 0){
+        strncpy(tx_string, rx_string, sizeof(tx_string));
+    }
+    
+    else if (strncmp(rx_string, "CONT_ON", 7) == 0){
+        strncpy(tx_string, rx_string, sizeof(tx_string));
+    }
+    
+    else if (strncmp(rx_string, "CONT_OFF", 8) == 0){
+        strncpy(tx_string, rx_string, sizeof(tx_string));
+    }
+    
+    else {
+        strncpy(tx_string, "BAD_CMD", sizeof(tx_string));
+    }
+    
+    memset(rx_string, 0, sizeof(rx_string));
 }
 
 
@@ -114,11 +145,14 @@ void RxUsartHandler(){
     rx_buffer[rx_pos] = RCREG1;     // should clear the flag by itself?
     
     // TESTING
-    TXREG1 = rx_buffer[rx_pos];
-    TXSTA1 = 0b00100000;            // Tx on
+//    TXREG1 = rx_buffer[rx_pos];
+//    TXSTA1 = 0b00100000;            // Tx on
     
     if (rx_buffer[rx_pos] == '\n'){
-        strncpy(rx_string, rx_buffer, rx_pos);
+        strncpy(rx_string, rx_buffer, rx_pos+1);
+//        while (++rx_pos < STR_MAX){      // fill rest of string with 
+//            rx_string[rx_pos] = 0;
+//        }
         rx_pos = 0;
         new_rx = 1;               
     }
@@ -126,8 +160,6 @@ void RxUsartHandler(){
     else{
         ++rx_pos;
     }
-    
-    return;
 }
 
 
