@@ -60,6 +60,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <pic18f87k22.h>
+#include <USART.h>
 
 
 #define _XTAL_FREQ 16000000   //Required in XC8 for delays. 16 Mhz oscillator clock
@@ -79,7 +80,7 @@ short adc_val = 0;
 char current_sensor = _POT;
 char previous_sensor = _POT;
 char flag_adc_reading = 0;
-char flag_USART_rx = 0;
+char new_rx = 0;
 const unsigned short ccp4_time = 65000;           // 16ms worth of instructions
 
 /******************************************************************************
@@ -92,10 +93,8 @@ void init_TMR0(void);
 void init_TMR1(void);
 void init_CCP4(void);
 void init_ADC(void);
-void init_USART(void);
 void init_SPI(void);
 void get_adc_reading(char*, const char*, const char *);
-void read_USART(void);
 void TMR0handler(void);     
 void CCP4handler(void);
 void read_ADC(void);
@@ -119,9 +118,15 @@ void main() {
             flag_adc_reading = 0;
         }
         
-        if (flag_USART_rx != 0){
-            read_USART();
-            flag_USART_rx = 0;
+//        if (flag_USART_rx != 0){
+//            read_USART();
+//            flag_USART_rx = 0;
+//        }
+        
+        if (new_rx == 1){
+            read_usart_str();
+            write_usart_str();
+            new_rx = 0;  
         }
     }
 }
@@ -137,14 +142,16 @@ void init() {
     init_lights();      // Port D and start up routine
     init_LCD();         // Port B and start up routine
     
-    RCONbits.IPEN = 1;  // Enable priority levels
+    RCONbits.IPEN = 1;              // Enable priority levels
     INTCONbits.GIEL = 1;            // Enable low-priority interrupts to CPU
     INTCONbits.GIEH = 1;            // Enable all interrupts
+    INTCONbits.PEIE = 1;            // Enable external interrupts
     
     init_TMR0();        // blink alive
     init_TMR1();        // update LCD
     init_CCP4();        // update LCD
     init_ADC();         // initialize ADC
+    init_USART();
 }
 
 
@@ -190,7 +197,7 @@ void init_TMR0(){
 
     // Configuring Interrupts
 
-    INTCON2bits.TMR0IP = 1;         // Assign low priority to TMR0 interrupt
+    INTCON2bits.TMR0IP = 1;         // Assign high priority to TMR0 interrupt
     INTCONbits.TMR0IE = 1;          // Enable TMR0 interrupts
     T0CONbits.TMR0ON = 1;           // Turning on TMR0
 }
@@ -233,16 +240,16 @@ void init_ADC(){
     ADCON0 = _POT;
     ADCON0bits.GO = 1;
 }
-
-void init_USART(){
-    TRISC = 0x00;     //RC6 tx, RC7 rx
-    TXSTA1 = 0b10100000;
-    //RCSTA1;
-    RCSTA1bits.SPEN = 1;
-    BAUDCON1 = 0b00000000;
-    SPBRGH1 = 0;
-    SPBRG1 = 12;
-}
+//
+//void init_USART(){
+//    TRISC = 0x00;     //RC6 tx, RC7 rx
+//    TXSTA1 = 0b10100000;
+//    //RCSTA1;
+//    RCSTA1bits.SPEN = 1;
+//    BAUDCON1 = 0b00000000;
+//    SPBRGH1 = 0;
+//    SPBRG1 = 12;
+//}
 
 void init_SPI(){
     TRISCbits.TRISC5 = 0;       //SD0 --> output (RC5)
@@ -295,9 +302,6 @@ void get_adc_reading(char* count, const char* throw, const char* meas_max){
         }
 }
 
-void read_USART(){
-    
-}
 /******************************************************************************
  * HiPriISR interrupt service routine
  *
@@ -309,6 +313,11 @@ void __interrupt() HiPriISR(void) {
     while(1) {
         if(INTCONbits.TMR0IF ) {
             TMR0handler();
+            continue;
+        }
+        
+        else if(PIR1bits.RC1IF) {
+            RxUsartHandler();
             continue;
         }
 
@@ -337,6 +346,8 @@ void __interrupt(low_priority) LoPriISR(void)
             continue;
         }
         
+        else if (PIR1bits.TX1IF)
+            TxUsartHandler();
         // restore temp copies of WREG, STATUS and BSR if needed.
         break;     
     }

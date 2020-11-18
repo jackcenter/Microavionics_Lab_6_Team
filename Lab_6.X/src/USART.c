@@ -7,70 +7,33 @@
 
 
 #include <xc.h>
-#include "LCDroutinesEasyPic.h"
+//#include "LCDroutinesEasyPic.h"
 #include <string.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <pic18f87k22.h>
+#include <USART.h>
 
-#pragma config FOSC=HS1, PWRTEN=ON, BOREN=ON, BORV=2, PLLCFG=OFF
-#pragma config WDTEN=OFF, CCP2MX=PORTC, XINST=OFF
-
-#define _XTAL_FREQ 16000000   //16 Mhz oscillator clock
+//#pragma config FOSC=HS1, PWRTEN=ON, BOREN=ON, BORV=2, PLLCFG=OFF
+//#pragma config WDTEN=OFF, CCP2MX=PORTC, XINST=OFF
+//
+//#define _XTAL_FREQ 16000000   //16 Mhz oscillator clock
 #define STR_MAX 9
 
 /******************************************************************************
  * Global variables
  ******************************************************************************/
 static char tx_string[STR_MAX + 25];
-//char error_str[STR_MAX + 25];
 static char tx_pos = 0;
 static char end_tx = 0;
 
 static char rx_string[STR_MAX];
 static char rx_buffer[STR_MAX];
 static char rx_pos = 0;
-static char new_rx = 0;
-
-/******************************************************************************
- * Function prototypes
- ******************************************************************************/
-void init(void);
-void init_USART(void);
-void TxUsartHandler(void);
-void RxUsartHandler(void);
-void read_usart_str(void);
-void write_usart_str(void);
-
-/******************************************************************************
- * main()
- ******************************************************************************/
-void main(void) {
-    init();
-    
-    while(1){
-        if (new_rx == 1){
-            read_usart_str();
-            write_usart_str();
-            new_rx = 0;  
-        }
-    }
-    
-    return;
-}
+extern char new_rx; 
 
 
-void init(){   
-    RCONbits.IPEN = 1;              // Enable priority levels
-    INTCONbits.GIEL = 1;            // Enable low-priority interrupts to CPU
-    INTCONbits.GIEH = 1;            // Enable all interrupts
-    INTCONbits.PEIE = 1;
-    
-    init_USART(); 
-}
-
-
-void init_USART(){  
+void init_USART(){
     TRISCbits.TRISC7 = 1;           // RX
     TRISCbits.TRISC6 = 0;           // TX
     // TXSTA1 = 0b00100000;         // Tx on
@@ -80,7 +43,10 @@ void init_USART(){
     RCSTA1 = 0b10010000;
    
     PIE1bits.TX1IE = 1;
+    IPR1bits.TX1IP = 0;
+    
     PIE1bits.RC1IE = 1;
+    IPR1bits.RC1IP = 1;
 }
 
 
@@ -170,27 +136,27 @@ void RxUsartHandler(){
 }
 
 
-void __interrupt() HiPriISR(void) {
-    
-    while(1) {
-        if(PIR1bits.RC1IF) {
-            RxUsartHandler();
-            continue;
-        }
-        
-        else if (PIR1bits.TX1IF)
-            TxUsartHandler();
-
-        break;      
-    }
-}
-
-void __interrupt(low_priority) LoPriISR(void) 
-{
-    // Save temp copies of WREG, STATUS and BSR if needed.
-    while(1) {
-     
-        // restore temp copies of WREG, STATUS and BSR if needed.
-        break;     
-    }
-}
+//void __interrupt() HiPriISR(void) {
+//    
+//    while(1) {
+//        if(PIR1bits.RC1IF) {
+//            RxUsartHandler();
+//            continue;
+//        }
+//        
+//        else if (PIR1bits.TX1IF)
+//            TxUsartHandler();
+//
+//        break;      
+//    }
+//}
+//
+//void __interrupt(low_priority) LoPriISR(void) 
+//{
+//    // Save temp copies of WREG, STATUS and BSR if needed.
+//    while(1) {
+//     
+//        // restore temp copies of WREG, STATUS and BSR if needed.
+//        break;     
+//    }
+//}
