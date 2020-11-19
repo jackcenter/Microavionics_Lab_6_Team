@@ -17,6 +17,8 @@ void TxUsartHandler(void);
 void RxUsartHandler(void);
 void read_usart_str(void);
 void write_usart_str(void);
+void convert_temp_to_tx(char*, int);
+void convert_pot_to_tx(char*, int);
 
 #endif	/* USART_H */
 
