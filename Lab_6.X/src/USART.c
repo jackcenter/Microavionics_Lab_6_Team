@@ -13,6 +13,7 @@
 #include <stdlib.h>
 #include <pic18f87k22.h>
 #include <USART.h>
+#include <LCDroutinesEasyPic.h>
 
 //#pragma config FOSC=HS1, PWRTEN=ON, BOREN=ON, BORV=2, PLLCFG=OFF
 //#pragma config WDTEN=OFF, CCP2MX=PORTC, XINST=OFF
@@ -53,10 +54,14 @@ void init_USART(){
 void read_usart_str(){
     if (strncmp(rx_string, "TEMP", 4) == 0){
         strncpy(tx_string, rx_string, sizeof(tx_string));
+        char temp_LCD[6];
+        convert_temp_to_string(temp_LCD, 6);
     }
     
     else if (strncmp(rx_string, "POT", 3) == 0){
         strncpy(tx_string, rx_string, sizeof(tx_string));
+        char pot_LCD[6];
+        convert_pot_to_string(pot_LCD, 6);
     }
     
     else if (strncmp(rx_string, "CONT_ON", 7) == 0){

@@ -55,11 +55,11 @@
  ******************************************************************************/
 
 #include <xc.h>
-#include "LCDroutinesEasyPic.h"
 #include <string.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <pic18f87k22.h>
+#include <LCDroutinesEasyPic.h>
 #include <USART.h>
 
 
@@ -98,7 +98,6 @@ void get_adc_reading(char*, const char*, const char *);
 void TMR0handler(void);     
 void CCP4handler(void);
 void read_ADC(void);
-
 
 /******************************************************************************
  * main()
@@ -302,6 +301,44 @@ void get_adc_reading(char* count, const char* throw, const char* meas_max){
         }
 }
 
+
+//void convert_temp_to_string(char* display, int len){
+//    short temp_val_temp = 0.806 * temp_val; 
+//    char temp_str[4];
+//    sprintf(temp_str, "%d", temp_val_temp);    
+//    char display_temp[] = {0x85, temp_str[0], temp_str[1],'.',temp_str[2],0x00};
+//    
+//    for (int i = 0; i < len; ++i){
+//        *(display + i) = display_temp[i];
+//    }
+//}
+//
+//void convert_pot_to_string(char* display, int len){
+//    short pot_val_temp = 0.0806 * pot_val; 
+//    char pot_str[4]; 
+//    sprintf(pot_str, "%d", pot_val_temp);
+//    
+//    if (pot_val_temp < 10){
+//        // value does not take up 3 digits, need to add leading 0
+//        pot_str[2] = pot_str[0];
+//        pot_str[1] = '0';
+//        pot_str[0] = '0';
+//    }
+//    
+//    else if (pot_val_temp < 100){
+//        // value does not take up 3 digits, need to add leading 0
+//        pot_str[2] = pot_str[1];
+//        pot_str[1] = pot_str[0];
+//        pot_str[0] = '0';
+//    }
+//    
+//    char display_temp[] = {0xC5, pot_str[0], '.', pot_str[1] ,pot_str[2],0x00};
+//    
+//    for (int i = 0; i < len; ++i){
+//        *(display + i) = display_temp[i];
+//    }
+//}
+
 /******************************************************************************
  * HiPriISR interrupt service routine
  *
@@ -384,32 +421,37 @@ void TMR0handler() {
  ******************************************************************************/
 void CCP4handler(){
     
-    // 12^2 bins from 0 to 3.3V -> current bin * 3.3/4096 = volts
-    short pot_val_temp = 0.0806 * pot_val;  
-    short temp_val_temp = 0.806 * temp_val;   
+//    // 12^2 bins from 0 to 3.3V -> current bin * 3.3/4096 = volts
+//    short pot_val_temp = 0.0806 * pot_val;  
+//    char pot_str[4];
+//    sprintf(pot_str, "%d", pot_val_temp);
+//    
+//    if (pot_val_temp < 10){
+//        // value does not take up 3 digits, need to add leading 0
+//        pot_str[2] = pot_str[0];
+//        pot_str[1] = '0';
+//        pot_str[0] = '0';
+//    }
+//    
+//    else if (pot_val_temp < 100){
+//        // value does not take up 3 digits, need to add leading 0
+//        pot_str[2] = pot_str[1];
+//        pot_str[1] = pot_str[0];
+//        pot_str[0] = '0';
+//    }
+//    
+//    char pot_LCD[6] = {0xC5, pot_str[0], '.', pot_str[1] ,pot_str[2],0x00};
     
-    char pot_str[4]; 
-    char temp_str[4];
+    char pot_LCD[6];
+    convert_pot_to_string(pot_LCD, 6);
     
-    sprintf(pot_str, "%d", pot_val_temp);
-    sprintf(temp_str, "%d", temp_val_temp);
-
-    if (pot_val_temp < 10){
-        // value does not take up 3 digits, need to add leading 0
-        pot_str[2] = pot_str[0];
-        pot_str[1] = '0';
-        pot_str[0] = '0';
-    }
+    char temp_LCD[6];
+    convert_temp_to_string(temp_LCD, 6);
     
-    else if (pot_val_temp < 100){
-        // value does not take up 3 digits, need to add leading 0
-        pot_str[2] = pot_str[1];
-        pot_str[1] = pot_str[0];
-        pot_str[0] = '0';
-    }
-    
-    char temp_LCD[6] = {0x85, temp_str[0], temp_str[1],'.',temp_str[2],0x00};
-    char pot_LCD[6] = {0xC5, pot_str[0], '.', pot_str[1] ,pot_str[2],0x00};
+//    short temp_val_temp = 0.806 * temp_val; 
+//    char temp_str[4];
+//    sprintf(temp_str, "%d", temp_val_temp);    
+//    char temp_LCD[6] = {0x85, temp_str[0], temp_str[1],'.',temp_str[2],0x00};
     
     DisplayC(temp_LCD);
     DisplayC(pot_LCD); 
