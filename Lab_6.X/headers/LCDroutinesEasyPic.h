@@ -77,6 +77,9 @@ void DisplayC( const char *LCDStr );
  ******************************************************************************/
 void DisplayV( const char *LCDStr );
 
+
+void convert_pot_to_string(char*, int);
+void convert_temp_to_string(char*, int);
 #endif
 
 
