@@ -84,6 +84,7 @@ char new_rx = 0;
 const unsigned short ccp4_time = 65000;           // 16ms worth of instructions
 const unsigned short ccp5_time = 40000;           // 10ms worth of instructions
 char ccp5_x = 0;
+char cont_on = 0;
 
 /******************************************************************************
  * Function prototypes
@@ -227,7 +228,7 @@ void init_TMR3(){
     TMR3L = 0xBE;
     
     IPR2bits.TMR3IP = 0;        //Assign Low Priority Interrupt
-    PIE2bits.TMR3IE = 1;        //Enable interrupt
+//    PIE2bits.TMR3IE = 1;        //Enable interrupt
     T3CONbits.TMR3ON = 1;       // Turn on TMR3
 }
 
@@ -420,16 +421,20 @@ void __interrupt(low_priority) LoPriISR(void)
             continue;
         }
         
-        else if(PIR2bits.TMR3IF){
-            DAC_output();
-        }
+//        else if(PIR2bits.TMR3IF){
+//            DAC_output();
+//            continue;
+//        }
  
-        else if (PIR1bits.TX1IF)
+        else if (PIR1bits.TX1IF){
             TxUsartHandler();
+            continue;
+        }
         
         else if (PIR4bits.CCP5IF && PIE4bits.CCP5IE){
             CCP5handler();
             PIR4bits.CCP5IF = 0;
+            continue;
         }
         // restore temp copies of WREG, STATUS and BSR if needed.
         break;     

@@ -34,6 +34,7 @@ extern char new_rx;
 extern char ccp5_x;
 extern short pot_val;
 extern short temp_val;
+extern char cont_on;
 
 
 
@@ -55,20 +56,39 @@ void init_USART(){
 
 
 void read_usart_str(){
-    if (rx_string[0] == 0x00){
-        strncpy(rx_string, "CONT_ON", 7);
+    
+    if (strncmp(rx_string, "CONT_OFF", 8) == 0){
+        ccp5_x = 0;
+        PIE4bits.CCP5IE = 0;    // disable
+        PIR4bits.CCP5IF = 0;    // clear flag
+        
+        cont_on = 0;
+        memset(rx_string, '\0', sizeof(rx_string));
+    }
+    else if (cont_on == 1){
+        char temp_tx[8];
+        convert_temp_to_tx(temp_tx, 8);
+        strncpy(tx_string, temp_tx, 6);
+        
+        char space[] = " ";
+        strcat(tx_string, space);
+        
+        convert_pot_to_tx(temp_tx, 8);
+        strncpy(tx_string, strcat(tx_string, temp_tx), 8);
     }
     
-    if (strncmp(rx_string, "TEMP", 4) == 0){
+    else if (strncmp(rx_string, "TEMP", 4) == 0){
         char temp_tx[8];
         convert_temp_to_tx(temp_tx, 8);
         strncpy(tx_string, temp_tx, sizeof(tx_string));
+        memset(rx_string, '\0', sizeof(rx_string));
     }
     
     else if (strncmp(rx_string, "POT", 3) == 0){
         char temp_tx[8];
         convert_pot_to_tx(temp_tx, 8);
         strncpy(tx_string, temp_tx, sizeof(tx_string));
+        memset(rx_string, '\0', sizeof(rx_string));
     }
     
     else if (strncmp(rx_string, "CONT_ON", 7) == 0){
@@ -82,15 +102,11 @@ void read_usart_str(){
         convert_pot_to_tx(temp_tx, 8);
         strncpy(tx_string, strcat(tx_string, temp_tx), 8);
 
+        cont_on = 1;
         PIE4bits.CCP5IE = 1;    // enable
+        memset(rx_string, '\0', sizeof(rx_string));
     }
-    
-    else if (strncmp(rx_string, "CONT_OFF", 8) == 0){
-        ccp5_x = 0;
-        PIE4bits.CCP5IE = 0;    // disable
-        PIR4bits.CCP5IF = 0;    // clear flag
-    }
-    
+       
     else {   
         if (rx_string[STR_MAX - 1] != '\0' && rx_string[STR_MAX - 1] != '\n'){
             strcpy(tx_string, "Error: command too long\n");
@@ -101,8 +117,9 @@ void read_usart_str(){
             strcpy(tx_string, "Error: unknown command, ");
             strncpy(tx_string, strcat(tx_string, rx_string), sizeof(tx_string));
         }
+        
+        memset(rx_string, '\0', sizeof(rx_string));
     }
-    memset(rx_string, '\0', sizeof(rx_string));
 }
 
 
@@ -118,6 +135,8 @@ void TxUsartHandler(){
     
     if (end_tx == 1) {
         TXSTA1bits.TXEN1 = 0;
+        memset(tx_string, '\0', sizeof(tx_string));
+        
     }
     
     else{
