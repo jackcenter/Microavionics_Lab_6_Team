@@ -61,7 +61,7 @@ void read_usart_str(){
         ccp5_x = 0;
         PIE4bits.CCP5IE = 0;    // disable
         PIR4bits.CCP5IF = 0;    // clear flag
-        
+//        strncpy(tx_string, "\n",1);
         cont_on = 0;
         memset(rx_string, '\0', sizeof(rx_string));
     }
@@ -124,16 +124,18 @@ void read_usart_str(){
 
 
 void write_usart_str(){
-    TXREG1 = tx_string[0];      // load first char
-    end_tx = 0;                 // no longer at the end of a tx
-    tx_pos = 1;                 // next index to look at
-    TXSTA1bits.TXEN1 = 1;       // enable tx
+    if (tx_string[0] != '\0'){
+        TXREG1 = tx_string[0];      // load first char
+        end_tx = 0;                 // no longer at the end of a tx
+        tx_pos = 1;                 // next index to look at
+        TXSTA1bits.TXEN1 = 1;       // enable tx
+    }
 }
 
 
 void TxUsartHandler(){
     
-    if (end_tx == 1) {
+    if (end_tx == 1) {      //|| tx_string[tx_pos] == '\0'
         TXSTA1bits.TXEN1 = 0;
         memset(tx_string, '\0', sizeof(tx_string));
         
