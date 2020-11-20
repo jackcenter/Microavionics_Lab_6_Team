@@ -268,6 +268,8 @@ void init_SPI(){
     TRISCbits.TRISC5 = 0;       //SD0 --> output (RC5)
     TRISCbits.TRISC4 = 1;       //SD1 --> input (RC4)
     TRISCbits.TRISC3 = 0;       //SCK --> output (RC3)
+    TRISEbits.TRISE0 = 0;       //RE0 --> output (CS)
+    
     
     SSP1STAT = 0b00000000;      //Initialize SSP1STAT
     SSP1STATbits.SMP = 1;
