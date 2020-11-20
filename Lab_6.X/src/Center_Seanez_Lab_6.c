@@ -82,6 +82,8 @@ char previous_sensor = _POT;
 char flag_adc_reading = 0;
 char new_rx = 0;
 const unsigned short ccp4_time = 65000;           // 16ms worth of instructions
+const unsigned short ccp5_time = 40000;           // 10ms worth of instructions
+char ccp5_x = 0;
 
 /******************************************************************************
  * Function prototypes
@@ -93,12 +95,14 @@ void init_TMR0(void);
 void init_TMR1(void);
 void init_TMR3(void);
 void init_CCP4(void);
+void init_CCP5(void);
 void init_ADC(void);
 void init_SPI(void);
 void DAC_output(void);
 void get_adc_reading(char*, const char*, const char *);
 void TMR0handler(void);     
 void CCP4handler(void);
+void CCP5handler(void);
 void read_ADC(void);
 
 /******************************************************************************
@@ -152,6 +156,7 @@ void init() {
     init_TMR1();        // update LCD
     init_TMR3();
     init_CCP4();        // update LCD
+    init_CCP5();
     init_ADC();         // initialize ADC
     init_USART();
     init_SPI();
@@ -210,7 +215,7 @@ void init_TMR1(){
     TMR1L = 0;                      // Clearing TMR0 registers
     TMR1H = 0;
 
-    CCPTMRS1 = 0b00000000;          // CCP4 -> TMR1
+    CCPTMRS1 = 0b00000000;          // CCP4, 5 -> TMR1
     
     PIE1bits.TMR1IE = 0;            // Disable interrupts
     T1CONbits.TMR1ON = 1;           // Turn on TMR1
@@ -236,6 +241,17 @@ void init_CCP4(){
     PIE4bits.CCP4IE = 1;    // enable
 }
 
+void init_CCP5(){
+  
+    CCP5CON = 0b00001010;
+    CCPR5L = (char)(ccp5_time & 0x00FF);
+    CCPR5H = (char)((ccp5_time >> 8) & 0x00FF);
+    
+    PIR4bits.CCP5IF = 0;    // clear flag
+    IPR4bits.CCP5IP = 0;    // Low pri
+    PIE4bits.CCP5IE = 0;    // disable
+}
+
 void init_ADC(){
     ADCON1 = 0b00000000;    //Configure ADCON1 for AVdd(GND) and AVss(3.3V)
     ADCON2 = 0b10010101;    //Configure ADCON2 for right justified; Tacq = 4Tad 
@@ -253,16 +269,7 @@ void init_ADC(){
     ADCON0 = _POT;
     ADCON0bits.GO = 1;
 }
-//
-//void init_USART(){
-//    TRISC = 0x00;     //RC6 tx, RC7 rx
-//    TXSTA1 = 0b10100000;
-//    //RCSTA1;
-//    RCSTA1bits.SPEN = 1;
-//    BAUDCON1 = 0b00000000;
-//    SPBRGH1 = 0;
-//    SPBRG1 = 12;
-//}
+
 
 void init_SPI(){
     TRISCbits.TRISC5 = 0;       //SD0 --> output (RC5)
@@ -370,44 +377,6 @@ void get_adc_reading(char* count, const char* throw, const char* meas_max){
         }
 }
 
-
-//void convert_temp_to_string(char* display, int len){
-//    short temp_val_temp = 0.806 * temp_val; 
-//    char temp_str[4];
-//    sprintf(temp_str, "%d", temp_val_temp);    
-//    char display_temp[] = {0x85, temp_str[0], temp_str[1],'.',temp_str[2],0x00};
-//    
-//    for (int i = 0; i < len; ++i){
-//        *(display + i) = display_temp[i];
-//    }
-//}
-//
-//void convert_pot_to_string(char* display, int len){
-//    short pot_val_temp = 0.0806 * pot_val; 
-//    char pot_str[4]; 
-//    sprintf(pot_str, "%d", pot_val_temp);
-//    
-//    if (pot_val_temp < 10){
-//        // value does not take up 3 digits, need to add leading 0
-//        pot_str[2] = pot_str[0];
-//        pot_str[1] = '0';
-//        pot_str[0] = '0';
-//    }
-//    
-//    else if (pot_val_temp < 100){
-//        // value does not take up 3 digits, need to add leading 0
-//        pot_str[2] = pot_str[1];
-//        pot_str[1] = pot_str[0];
-//        pot_str[0] = '0';
-//    }
-//    
-//    char display_temp[] = {0xC5, pot_str[0], '.', pot_str[1] ,pot_str[2],0x00};
-//    
-//    for (int i = 0; i < len; ++i){
-//        *(display + i) = display_temp[i];
-//    }
-//}
-
 /******************************************************************************
  * HiPriISR interrupt service routine
  *
@@ -444,6 +413,7 @@ void __interrupt(low_priority) LoPriISR(void)
     while(1) {
         if( PIR4bits.CCP4IF ) {   // change to CCP4
             CCP4handler();
+            PIR4bits.CCP4IF = 0;
             continue;
         }
         
@@ -458,6 +428,11 @@ void __interrupt(low_priority) LoPriISR(void)
  
         else if (PIR1bits.TX1IF)
             TxUsartHandler();
+        
+        else if (PIR4bits.CCP5IF && PIE4bits.CCP5IE){
+            CCP5handler();
+            PIR4bits.CCP5IF = 0;
+        }
         // restore temp copies of WREG, STATUS and BSR if needed.
         break;     
     }
@@ -493,49 +468,33 @@ void TMR0handler() {
  * Handles updating the LCD approximately every 130ms
  ******************************************************************************/
 void CCP4handler(){
-    
-//    // 12^2 bins from 0 to 3.3V -> current bin * 3.3/4096 = volts
-//    short pot_val_temp = 0.0806 * pot_val;  
-//    char pot_str[4];
-//    sprintf(pot_str, "%d", pot_val_temp);
-//    
-//    if (pot_val_temp < 10){
-//        // value does not take up 3 digits, need to add leading 0
-//        pot_str[2] = pot_str[0];
-//        pot_str[1] = '0';
-//        pot_str[0] = '0';
-//    }
-//    
-//    else if (pot_val_temp < 100){
-//        // value does not take up 3 digits, need to add leading 0
-//        pot_str[2] = pot_str[1];
-//        pot_str[1] = pot_str[0];
-//        pot_str[0] = '0';
-//    }
-//    
-//    char pot_LCD[6] = {0xC5, pot_str[0], '.', pot_str[1] ,pot_str[2],0x00};
-    
+        
     char pot_LCD[6];
     convert_pot_to_string(pot_LCD, 6);
     
     char temp_LCD[6];
     convert_temp_to_string(temp_LCD, 6);
-    
-//    short temp_val_temp = 0.806 * temp_val; 
-//    char temp_str[4];
-//    sprintf(temp_str, "%d", temp_val_temp);    
-//    char temp_LCD[6] = {0x85, temp_str[0], temp_str[1],'.',temp_str[2],0x00};
-    
+      
     DisplayC(temp_LCD);
     DisplayC(pot_LCD); 
     
     CCPR4L += (char)(ccp4_time & 0x00FF);
     CCPR4H += (char)((ccp4_time >> 8) & 0x00FF);
-    PIR4bits.CCP4IF = 0;
+}
+
+void CCP5handler(){
+    // when cont_on command is given, every second an update is sent
+    if (ccp5_x == 10){
+        ccp5_x = 0;
+        new_rx = 1;
+    }
     
-    // TODO: Testing, delete when update functions are added
-//    temp_val += 1;
-//    pot_val += 1;
+    else{
+        ccp5_x += 1;
+    }
+    
+    CCPR5L += (char)(ccp5_time & 0x00FF);
+    CCPR5H += (char)((ccp5_time >> 8) & 0x00FF);
 }
 
 void read_ADC(){
@@ -543,13 +502,6 @@ void read_ADC(){
     bufferL = ADRESL;                   //Save low/high values of ADC
     adc_val = (bufferH << 8) | bufferL; //Concatenate high and low bytes     
     ADCON0 = current_sensor;            //Configure ADCON0 to read current sensor;
-//     if current_sensor != previous_sensor => wait 2us (~= 2.45 - 2*.25)
-//    if (current_sensor != previous_sensor){
-//        ADCON0 = current_sensor;            //Configure ADCON0 to read current sensor;
-//        previous_sensor = current_sensor;
-//        __delay_us(50);
-//    }
-
     ADCON0bits.GO = 1;                  //Start acquisition then conversion
     PIR1bits.ADIF = 0;                  //Clear ADC flag
     flag_adc_reading = 1;

@@ -13,7 +13,6 @@
 #include <stdlib.h>
 #include <pic18f87k22.h>
 #include <USART.h>
-#include <LCDroutinesEasyPic.h>
 
 //#pragma config FOSC=HS1, PWRTEN=ON, BOREN=ON, BORV=2, PLLCFG=OFF
 //#pragma config WDTEN=OFF, CCP2MX=PORTC, XINST=OFF
@@ -32,6 +31,10 @@ static char rx_string[STR_MAX];
 static char rx_buffer[STR_MAX];
 static char rx_pos = 0;
 extern char new_rx; 
+extern char ccp5_x;
+extern short pot_val;
+extern short temp_val;
+
 
 
 void init_USART(){
@@ -52,24 +55,40 @@ void init_USART(){
 
 
 void read_usart_str(){
+    if (rx_string[0] == 0x00){
+        strncpy(rx_string, "CONT_ON", 7);
+    }
+    
     if (strncmp(rx_string, "TEMP", 4) == 0){
-        strncpy(tx_string, rx_string, sizeof(tx_string));
-        char temp_LCD[6];
-        convert_temp_to_string(temp_LCD, 6);
+        char temp_tx[8];
+        convert_temp_to_tx(temp_tx, 8);
+        strncpy(tx_string, temp_tx, sizeof(tx_string));
     }
     
     else if (strncmp(rx_string, "POT", 3) == 0){
-        strncpy(tx_string, rx_string, sizeof(tx_string));
-        char pot_LCD[6];
-        convert_pot_to_string(pot_LCD, 6);
+        char temp_tx[8];
+        convert_pot_to_tx(temp_tx, 8);
+        strncpy(tx_string, temp_tx, sizeof(tx_string));
     }
     
     else if (strncmp(rx_string, "CONT_ON", 7) == 0){
-        strncpy(tx_string, rx_string, sizeof(tx_string));
+        char temp_tx[8];
+        convert_temp_to_tx(temp_tx, 8);
+        strncpy(tx_string, temp_tx, 6);
+        
+        char space[] = " ";
+        strcat(tx_string, space);
+        
+        convert_pot_to_tx(temp_tx, 8);
+        strncpy(tx_string, strcat(tx_string, temp_tx), 8);
+
+        PIE4bits.CCP5IE = 1;    // enable
     }
     
     else if (strncmp(rx_string, "CONT_OFF", 8) == 0){
-        strncpy(tx_string, rx_string, sizeof(tx_string));
+        ccp5_x = 0;
+        PIE4bits.CCP5IE = 0;    // disable
+        PIR4bits.CCP5IF = 0;    // clear flag
     }
     
     else {   
@@ -141,27 +160,39 @@ void RxUsartHandler(){
 }
 
 
-//void __interrupt() HiPriISR(void) {
-//    
-//    while(1) {
-//        if(PIR1bits.RC1IF) {
-//            RxUsartHandler();
-//            continue;
-//        }
-//        
-//        else if (PIR1bits.TX1IF)
-//            TxUsartHandler();
-//
-//        break;      
-//    }
-//}
-//
-//void __interrupt(low_priority) LoPriISR(void) 
-//{
-//    // Save temp copies of WREG, STATUS and BSR if needed.
-//    while(1) {
-//     
-//        // restore temp copies of WREG, STATUS and BSR if needed.
-//        break;     
-//    }
-//}
+void convert_temp_to_tx(char* val_ptr, int len){
+    short temp_val_temp = 0.806 * temp_val; 
+    char temp_str[4];
+    sprintf(temp_str, "%d", temp_val_temp);    
+    char display[] = {'T','=',temp_str[0],temp_str[1],'.',temp_str[2],'\n',0x00};
+    
+    for (int i = 0; i < len; ++i){
+        *(val_ptr + i) = display[i];
+    }
+}
+
+void convert_pot_to_tx(char* val_ptr, int len){
+    short pot_val_temp = 0.0806 * pot_val; 
+    char pot_str[4]; 
+    sprintf(pot_str, "%d", pot_val_temp);
+    
+    if (pot_val_temp < 10){
+        // value does not take up 3 digits, need to add leading 0
+        pot_str[2] = pot_str[0];
+        pot_str[1] = '0';
+        pot_str[0] = '0';
+    }
+    
+    else if (pot_val_temp < 100){
+        // value does not take up 3 digits, need to add leading 0
+        pot_str[2] = pot_str[1];
+        pot_str[1] = pot_str[0];
+        pot_str[0] = '0';
+    }
+    
+    char display[] = {'P','=',pot_str[0],'.',pot_str[1],pot_str[2],'\n',0x00};
+    
+    for (int i = 0; i < len; ++i){
+        *(val_ptr + i) = display[i];
+    }
+}
