@@ -227,8 +227,8 @@ void init_TMR1(){
 
 void init_TMR3(){
     T3CON = 0b00000010;
-    TMR3H = 0xFC; 
-    TMR3L = 0x7B;
+    TMR3H = 0xFD; 
+    TMR3L = 0x08;
 
     IPR2bits.TMR3IP = 0;        //Assign Low Priority Interrupt
     PIE2bits.TMR3IE = 1;        //Enable interrupt
@@ -330,8 +330,8 @@ void DAC_Output(){
     
   
     //Load TMR3 values again:
-    TMR3H = 0xFC;
-    TMR3L = 0x7B;
+    TMR3H = 0xFD;
+    TMR3L = 0x08;
     PIR2bits.TMR3IF = 0; // clear flag
 }
 
