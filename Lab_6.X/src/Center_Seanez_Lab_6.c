@@ -85,6 +85,9 @@ const unsigned short ccp4_time = 65000;           // 16ms worth of instructions
 const unsigned short ccp5_time = 40000;           // 10ms worth of instructions
 char ccp5_x = 0;
 char cont_on = 0;
+char DAC_trash = 0x00; 
+char DAC_dir = 1;                           //initialize DAC direction 
+unsigned int DAC_out = 0b0011000000000000;   //initializing output to DAC
 
 /******************************************************************************
  * Function prototypes
@@ -99,7 +102,7 @@ void init_CCP4(void);
 void init_CCP5(void);
 void init_ADC(void);
 void init_SPI(void);
-void DAC_output(void);
+void DAC_Output(void);
 void get_adc_reading(char*, const char*, const char *);
 void TMR0handler(void);     
 void CCP4handler(void);
@@ -223,12 +226,12 @@ void init_TMR1(){
 }
 
 void init_TMR3(){
-    T3CON = 0b00000110;
-    TMR3H = 0xF0;
-    TMR3L = 0xBE;
-    
+    T3CON = 0b00000010;
+    TMR3H = 0xFC; 
+    TMR3L = 0x7B;
+
     IPR2bits.TMR3IP = 0;        //Assign Low Priority Interrupt
-//    PIE2bits.TMR3IE = 1;        //Enable interrupt
+    PIE2bits.TMR3IE = 1;        //Enable interrupt
     T3CONbits.TMR3ON = 1;       // Turn on TMR3
 }
 
@@ -277,73 +280,59 @@ void init_SPI(){
     TRISCbits.TRISC4 = 1;       //SD1 --> input (RC4)
     TRISCbits.TRISC3 = 0;       //SCK --> output (RC3)
     TRISEbits.TRISE0 = 0;       //RE0 --> output (CS)
-    
+    TRISAbits.TRISA4 = 1;       //RA5 Input from DAC
+    TRISEbits.TRISE0 = 0;       //CS --> output (E0)
     
     SSP1STAT = 0b00000000;      //Initialize SSP1STAT
-    SSP1STATbits.SMP = 1;
+    SSP1STATbits.SMP = 0;
     SSP1STATbits.CKE = 0;       //CKE 0 for Mode(0,0) or 1 for Mode(1,1)
     SSP1STATbits.BF = 0;        //Clears automatically after BF=1     
    
-    SSP1CON1bits.WCOL = 0;      //if BF=1 --> WCOL=1 must be CLEARED
+    SSP1CON1bits.WCOL = 0;      
     SSP1CON1bits.SSPOV = 0;
     SSP1CON1bits.SSPEN = 1;
     SSP1CON1bits.CKP = 1;       //CKP 1 for Mode(0,0) or 0 for Mode(1,1)
-    // SSPM -- Need to figure out clock frequency
-    //Fosc/8 may need to change this
-    SSP1CON1bits.SSPM = 0b1010;
-     
-    char DAC_trash; 
-    char DAC_dir = 1;                           //initialize DAC direction 
-    unsigned int DAC_out = 0b001100000000000;   //initializing output to DAC
-                             
+    SSP1CON1bits.SSPM = 0b0000; //Fosc/4                             
 }
 
-void DAC_output(){
-    
-    
-    char DAC_trash; 
-    char DAC_dir = 1; 
-    unsigned int DAC_out = 0b001100000000000;   //initializing output to DAC
-                              //initialize DAC direction 
+
+void DAC_Output(){
     // Triangle wave output
     if( DAC_dir == 1 ) {
         DAC_out++; //increase DAC data by one 
+        if( DAC_out == 0x3FFF){
+            DAC_dir = 0;                  //if 3.3V --> decrease V
+        }    
     }
     if( DAC_dir == 0 ){
         DAC_out--; //decrease DAC data by one
+        if( DAC_out == 0x3000){
+            DAC_dir = 1;      
+        }
     }
-    
-    //Check if it has reached max/min DAC values
-    if( DAC_out == 0b001100000000000){
-        DAC_dir = 1;                   //if 0V --> increase V
-    }
-    if( DAC_out == 0b001111111111111){
-        DAC_dir = 0;                  //if 3.3V --> decrease V
-    }
-    
-   
-    //read SSP1BUF and store it in trash variable  
-    DAC_trash = SSP1BUF;
-    
+      
     //Drive CS low to enable DAC:
     LATEbits.LATE0 = 0;
+    
     //Load first 8-bits into SSP1BUF to send to DAC:
-    SSP1BUF = DAC_out << 8;           //Includes 4 config bits and 4MSB of data
+    SSP1BUF = DAC_out >> 8;           //Includes 4 config bits and 4MSB of data
     //Wait for BF to set
     while( SSP1STATbits.BF == 0){}
     //Read SSP1BUF again
     DAC_trash = SSP1BUF;
     // Load last 8 bits to SSP1BUF
-    SSP1BUF = DAC_out >> 8;            //Send lower byte of data to DAC
+    SSP1BUF = DAC_out;            //Send lower byte of data to DAC
     //Wait for BF to set again
-    while( SSP1STATbits.BF == 0){}
+    while( SSP1STATbits.BF == 0){}   
+    DAC_trash = SSP1BUF;
     //End of tx!!! Drive CS high
     LATEbits.LATE0 = 1; 
     
+  
     //Load TMR3 values again:
-    TMR0H = 0xF0;
-    TMR3L = 0xBE;
-    PIR2bits.TMR3IF = 0;
+    TMR3H = 0xFC;
+    TMR3L = 0x7B;
+    PIR2bits.TMR3IF = 0; // clear flag
 }
 
 void get_adc_reading(char* count, const char* throw, const char* meas_max){
@@ -423,10 +412,10 @@ void __interrupt(low_priority) LoPriISR(void)
             continue;
         }
         
-//        else if(PIR2bits.TMR3IF){
-//            DAC_output();
-//            continue;
-//        }
+        else if(PIR2bits.TMR3IF){
+            DAC_Output();
+            continue;
+        }
  
         else if (PIR1bits.TX1IF){
             TxUsartHandler();
